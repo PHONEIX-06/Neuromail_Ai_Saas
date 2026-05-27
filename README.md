@@ -84,7 +84,7 @@ AWS_S3_BUCKET=
 5. Add S3 attachment upload and preview.
 6. Add Stripe checkout, billing portal, and webhook handling.
 7. Add pgvector embeddings and semantic search.
-8. Add Next.js 15 App Router frontend migration when you are ready to move from the current TanStack UI.
+8. Add Next.js 15 App Router frontend migration.
 
 ## AWS Resume Deployment
 
