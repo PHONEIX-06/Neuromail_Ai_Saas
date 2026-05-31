@@ -117,8 +117,18 @@ async function enforceSendQuota(organizationId: string, userId: string) {
 }
 
 app.get("/health", async (_req, res) => {
-  await prisma.$queryRaw`select 1`;
-  res.json({ ok: true, service: "neuromail-api", ai: Boolean(env.GEMINI_API_KEY) });
+  try {
+    await prisma.$queryRaw`select 1`;
+    res.json({ ok: true, service: "neuromail-api", ai: Boolean(env.GEMINI_API_KEY), database: "connected" });
+  } catch (error) {
+    res.status(503).json({
+      ok: false,
+      service: "neuromail-api",
+      ai: Boolean(env.GEMINI_API_KEY),
+      database: "unavailable",
+      error: error instanceof Error ? error.message : "Database check failed",
+    });
+  }
 });
 
 app.post("/auth/register", async (req, res) => {

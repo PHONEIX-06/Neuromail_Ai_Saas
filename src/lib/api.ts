@@ -43,8 +43,7 @@ type ApiSession = {
 };
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
-console.log("VITE_API_URL =", import.meta.env.VITE_API_URL);
-console.log("apiBase =", apiBase);
+const apiTimeoutMs = 8_000;
 
 export type EmailAccount = {
   id: string;
@@ -102,7 +101,7 @@ function saveStored<T>(key: string, value: T) {
 export async function apiGet<T>(path: string, fallback: T): Promise<T> {
   try {
     const request = await buildRequest(path);
-    const response = await fetch(request.url, request.init);
+    const response = await fetchWithTimeout(request.url, request.init);
     if (!response.ok) return fallback;
     return normalizeResponse(path, await response.json()) as T;
   } catch {
@@ -118,7 +117,7 @@ export async function apiPost<T>(path: string, body: unknown, fallback: T): Prom
       headers: { "content-type": "application/json" },
       body: JSON.stringify(normalizedBody),
     });
-    const response = await fetch(request.url, request.init);
+    const response = await fetchWithTimeout(request.url, request.init);
     if (!response.ok) return fallback;
     return normalizeResponse(path, await response.json()) as T;
   } catch {
@@ -133,7 +132,7 @@ export async function apiPatch<T>(path: string, body: unknown, fallback: T): Pro
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    const response = await fetch(request.url, request.init);
+    const response = await fetchWithTimeout(request.url, request.init);
     if (!response.ok) return fallback;
     return normalizeResponse(path, await response.json()) as T;
   } catch {
@@ -200,7 +199,7 @@ export async function getSendQuota(): Promise<SendQuota | null> {
 }
 
 async function authorizedFetch(path: string, session: ApiSession, init: RequestInit = {}) {
-  return fetch(`${apiBase}${path}`, {
+  return fetchWithTimeout(`${apiBase}${path}`, {
     ...init,
     headers: {
       ...(init.headers ?? {}),
@@ -226,13 +225,28 @@ async function buildRequest(path: string, init: RequestInit = {}): Promise<{ url
 }
 
 async function ensureSession(): Promise<ApiSession> {
+  if (!apiBase) throw new Error("VITE_API_URL is not configured");
   const existing = loadStored<ApiSession | null>(storageKeys.session, null);
   if (existing?.token) return existing;
-  const response = await fetch(`${apiBase}/auth/dev-login`, { method: "POST" });
+  const response = await fetchWithTimeout(`${apiBase}/auth/dev-login`, { method: "POST" });
   if (!response.ok) throw new Error("Unable to create API session");
   const session = await response.json() as ApiSession;
   saveStored(storageKeys.session, session);
   return session;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), apiTimeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 async function mapPath(path: string, session: ApiSession, method: string) {
