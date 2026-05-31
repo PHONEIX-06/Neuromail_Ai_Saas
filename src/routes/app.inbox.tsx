@@ -37,12 +37,25 @@ function InboxPage() {
     saveStoredEmails(items);
   }, [items]);
 
-  const filters = ["All", "Urgent", "Sales", "Internal", "Updates"];
-  const list = useMemo(() => filter === "All"
-    ? items
-    : filter === "Urgent" ? items.filter((e) => e.priority === "urgent")
-    : items.filter((e) => e.category === filter), [filter, items]);
-  const selected = items.find((email) => email.id === selectedId) ?? list[0] ?? items[0] ?? seedEmails[0];
+const filters = ["All", "Urgent", "Sales", "Internal", "Updates"];
+
+const list = useMemo(() => filter === "All"
+  ? items
+  : filter === "Urgent"
+    ? items.filter((e) => e.priority === "urgent")
+    : items.filter((e) => e.category === filter),
+  [filter, items]
+);
+
+console.log("ITEMS:", items);
+console.log("LIST:", list);
+console.log("SELECTED ID:", selectedId);
+
+const selected =
+  items.find((email) => email.id === selectedId) ??
+  list[0] ??
+  items[0] ??
+  seedEmails[0];
 
   useEffect(() => {
     setReplyText(`Hi ${selected.from.name.split(" ")[0]},\n\nThanks for the context. I will take a look and follow up with the next step shortly.\n\nBest,\nAlex`);
